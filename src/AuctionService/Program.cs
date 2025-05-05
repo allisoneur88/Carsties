@@ -1,4 +1,5 @@
 using AuctionService.Data;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,9 +9,24 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddDbContext<AuctionDbContext>(opt =>
 {
-    opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+   opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+builder.Services.AddMassTransit(x =>
+{
+   x.AddEntityFrameworkOutbox<AuctionDbContext>(o =>
+   {
+      o.QueryDelay = TimeSpan.FromSeconds(10);
+
+      o.UsePostgres();
+      o.UseBusOutbox();
+   });
+
+   x.UsingRabbitMq((context, cfg) =>
+   {
+      cfg.ConfigureEndpoints(context);
+   });
+});
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 
@@ -24,11 +40,11 @@ app.MapControllers();
 
 try
 {
-    DbInitializer.InitDb(app);
+   DbInitializer.InitDb(app);
 }
 catch (Exception ex)
 {
-    Console.WriteLine(ex);
+   Console.WriteLine(ex);
 }
 
 app.Run();
