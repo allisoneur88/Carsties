@@ -83,6 +83,10 @@ public class AuctionsController(AuctionDbContext context, IMapper mapper, IPubli
       auction.Item.Color = updateAuctionDto.Color ?? auction.Item.Color;
       auction.Item.Mileage = updateAuctionDto.Mileage ?? auction.Item.Mileage;
 
+      var updatedAuction = mapper.Map<AuctionDto>(auction);
+
+      await publishEndpoint.Publish(mapper.Map<AuctionUpdated>(updatedAuction));
+
       var result = await context.SaveChangesAsync() > 0;
 
       if (result) return Ok();
@@ -98,6 +102,10 @@ public class AuctionsController(AuctionDbContext context, IMapper mapper, IPubli
       if (auction == null) return NotFound();
 
       //TODO: Check seller == username
+
+      var deletedAuction = mapper.Map<AuctionDto>(auction);
+
+      await publishEndpoint.Publish(mapper.Map<AuctionDeleted>(deletedAuction));
 
       context.Auctions.Remove(auction);
 
